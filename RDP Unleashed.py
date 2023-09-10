@@ -338,10 +338,10 @@ def patching(param="patch"):
     result = subprocess.check_output(command, shell=True, text=True)
 
     with open("termsrv.dll", "rb") as f:
-        data = f.read().hex()
+        data = f.read().hex().upper()
     if param == "patch":
         uin = (input(f"Wprowadź kod heksadecymalny dla termsrv.dll {result.strip().replace('Version=', 'wersji ')}: ")
-               .replace(" ", ""))
+               .replace(" ", "")).upper()
         if len(uin) == 24 and uin in data:
             data.replace(uin, patch)
             with open("termsrv.dll", "wb") as f:
@@ -364,7 +364,7 @@ blue = "\033[94m"
 yellow = "\033[93m"
 reset = "\033[0m"
 welcome = "{} v{} by {}".format(name, version, author)
-separator = "#" * len(welcome)
+separator = "-" * len(welcome)
 cancel = "\n{}Powrót...{}".format(blue, reset)
 try_again = "{0}\n{1:^{width}}\n{0}".format(separator, "Spróbuj ponownie.", width=len(separator))
 print("{0}\n{1}\n{0}\n".format(separator, welcome))
