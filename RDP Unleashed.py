@@ -4,7 +4,7 @@ import paramiko
 import os
 import json
 import subprocess
-
+import time
 
 name = "RDP Unleashed"
 version = 1.0
@@ -35,28 +35,30 @@ class Terminal:
         try:
             self.terminal.set_missing_host_key_policy(paramiko.AutoAddPolicy)
             self.terminal.connect(self.ip, port=self.p, username=self.user, password=self.pwd)
-            print("Połączono")
+            print("{}POŁĄCZONO{}".format(green, reset))
         except Exception as err:
-            print("Błąd połączenia: {}".format(err))
+            print("{}BŁĄD POŁĄCZENIA{}: {}".format(red, reset, err))
 
     def run(self, command):
         try:
             self.terminal.exec_command(command)
+            time.sleep(3)
         except Exception as err:
-            print("Błąd polecenia: {}".format(err))
-        else:
-            print("{}: SUKCES".format(command.replace("\n", "")))
+            print("{}BŁĄD POLECENIA{}: {}".format(red, reset, err))
 
     def upload(self, file):
         try:
             sftp = self.terminal.open_sftp()
             sftp.put(file, self.temppath)
             sftp.close()
+            print("Wysłano. Lokalizacja: {}".format(self.temppath))
+            print("Aplikowanie...")
             self.run('del "{}"'.format(self.remotepath))
             self.run('copy "{}" "{}"'.format(self.temppath, self.remotepath))
             self.run('del "{}"'.format(self.temppath))
+            print("{}SUKCES{}".format(green, reset))
         except Exception as err:
-            print("Błąd wysyłania: {}".format(err))
+            print("{}BŁĄD WYSYŁANIA{}: {}".format(red, reset, err))
 
     def download(self, file, target_name):
         try:
@@ -65,7 +67,7 @@ class Terminal:
             sftp.close()
             print("Pobrano termsrv.dll")
         except Exception as err:
-            print("Błąd pobierania: {}".format(err))
+            print("{}BŁĄD POBIERANIA{}: {}".format(red, reset, err))
 
     def backup(self):
         try:
@@ -75,9 +77,9 @@ class Terminal:
             os.makedirs(os.path.dirname(file), exist_ok=True)
             sftp.get(self.remotepath, file)
             sftp.close()
-            print("Utworzono kopię zapasową.")
+            print("{}UTWORZONO KOPIĘ ZAPASOWĄ:{} {}".format(green, reset, file))
         except Exception as err:
-            print("Błąd pobierania: {}".format(err))
+            print("{}BŁĄD POBIERANIA{}: {}".format(red, reset, err))
 
     def close(self):
         self.terminal.close()
@@ -220,7 +222,8 @@ def execute():
             connection.run(connection.rdp_off)
             print("Tworzenie kopii zapasowej oryginalnego pliku...")
             connection.backup()
-            print("Wysyłanie pliku: {}...".format(connection.file))
+            print("Wysyłanie pliku: {} do {}:{} jako {}..."
+                  .format(os.path.basename(connection.file), settings.host, settings.port, settings.username))
             connection.upload(connection.file)
             print("Uruchamianie usługi pulpitu zdalnego...")
             connection.run(connection.rdp_on)
@@ -340,12 +343,19 @@ def patching(param="patch"):
     with open("termsrv.dll", "rb") as f:
         data = f.read().hex().upper()
     if param == "patch":
-        uin = (input(f"Wprowadź kod heksadecymalny dla termsrv.dll {result.strip().replace('Version=', 'wersji ')}: ")
-               .replace(" ", "")).upper()
+        uin = (input(f"Wprowadź kod heksadecymalny dla termsrv.dll {result.strip().replace('Version=', 'w wersji ')}: ")
+               .upper().replace(" ", ""))
         if len(uin) == 24 and uin in data:
-            data.replace(uin, patch)
-            with open("termsrv.dll", "wb") as f:
-                f.write(bytes.fromhex(data))
+            print(f"Stara wartość: {uin}")
+            print(f"Nowa wartość: {patch}")
+            data = data.replace(uin, patch)
+            if patch in data:
+                print("Patchowanie: {}SUKCES{}". format(green, reset))
+                with open("termsrv.dll", "wb") as f:
+                    f.write(bytes.fromhex(data))
+                    f.close()
+            else:
+                print("Patchowanie: {}BŁĄD{}".format(red, reset))
                 f.close()
         elif uin == "":
             print(cancel)
@@ -365,8 +375,8 @@ yellow = "\033[93m"
 reset = "\033[0m"
 welcome = "{} v{} by {}".format(name, version, author)
 separator = "-" * len(welcome)
-cancel = "\n{}Powrót...{}".format(blue, reset)
-try_again = "{0}\n{1:^{width}}\n{0}".format(separator, "Spróbuj ponownie.", width=len(separator))
+cancel = "\n{}POWRÓT...{}".format(blue, reset)
+try_again = "{0}\n{1:^{width}}\n{0}".format(separator, "SPRÓBUJ PONOWNIE", width=len(separator))
 print("{0}\n{1}\n{0}\n".format(separator, welcome))
 
 ##
