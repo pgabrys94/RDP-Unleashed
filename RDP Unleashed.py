@@ -7,7 +7,7 @@ import subprocess
 import time
 
 name = "RDP Unleashed"
-version = 1.0
+version = 1.2
 author = "PG"
 
 
@@ -336,15 +336,31 @@ def target():
 
 def patching(param="patch"):
     patch = "B80001000089813806000090"
+    hex_file = os.path.join(os.getcwd(), "hexpatterns.json")
+    current_hex = None
     command = 'wmic datafile where name="{}" get Version /value'.format(os.path.join(os.getcwd(), "termsrv.dll")
                                                                         .replace("\\", "\\\\"))
-    result = subprocess.check_output(command, shell=True, text=True)
+    termsrv_version = subprocess.check_output(command, shell=True, text=True).strip().replace('Version=', '')
 
     with open("termsrv.dll", "rb") as f:
         data = f.read().hex().upper()
+
+    if os.path.exists(hex_file):
+        try:
+            with open(hex_file, "r") as f:
+                offsets = json.load(f)
+                if termsrv_version in offsets.keys() and offsets[termsrv_version]:
+                    current_hex = offsets[termsrv_version]
+        except json.JSONDecodeError:
+            pass
+
     if param == "patch":
-        uin = (input(f"Wprowadź kod heksadecymalny dla termsrv.dll {result.strip().replace('Version=', 'w wersji ')}: ")
-               .upper().replace(" ", ""))
+        if current_hex and not patching("check"):
+            print("{}WZORZEC OBECNY W PLIKU: {} - STOSOWANIE...{}".format(green, os.path.basename(hex_file), reset))
+            uin = current_hex.upper().replace(" ", "")
+        else:
+            uin = (input(f"Wprowadź kod heksadecymalny dla termsrv.dll w wersji {termsrv_version}: ")
+                   .upper().replace(" ", ""))
         if len(uin) == 24 and uin in data:
             print(f"Stara wartość: {uin}")
             print(f"Nowa wartość: {patch}")
